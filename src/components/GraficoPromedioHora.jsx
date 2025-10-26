@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import axios from "axios";
+import { collectionGroup, getDocs } from "firebase/firestore";
+import db from "../firebaseConfig";
+
 import {
   LineChart,
   Line,
@@ -27,19 +29,54 @@ const GraficoPromedioHora = () => {
       return alert("La fecha final no puede ser anterior a la inicial.");
 
     try {
-      const response = await axios.get("http://127.0.0.1:5000/promedio_hora", {
-        params: { fechaInicio, fechaFin, variable, tipo: tipoConsulta },
+      const snapshot = await getDocs(collectionGroup(db, "mediciones"));
+
+      const registros = snapshot.docs
+        .map((doc) => doc.data())
+        .filter((d) => {
+          const fecha = d.fecha;
+          return (
+            (!fechaInicio || fecha >= fechaInicio) &&
+            (!fechaFin || fecha <= fechaFin)
+          );
+        });
+
+      const agrupados = {};
+
+      registros.forEach((d) => {
+        const hora = d.hora?.slice(0, 5); // HH:mm
+        const valor = parseFloat(d[variable]);
+        if (!agrupados[hora]) agrupados[hora] = [];
+        if (!isNaN(valor)) agrupados[hora].push(valor);
       });
-      setDatos(response.data);
+
+      const resultado = Object.entries(agrupados).map(([hora, valores]) => {
+        let valor;
+        if (tipoConsulta === "promedio") {
+          const sum = valores.reduce((a, b) => a + b, 0);
+          valor = sum / valores.length;
+        } else if (tipoConsulta === "maximo") {
+          valor = Math.max(...valores);
+        } else if (tipoConsulta === "minimo") {
+          valor = Math.min(...valores);
+        }
+        return {
+          hora,
+          [variable]: Number(valor.toFixed(2)),
+        };
+      });
+
+      resultado.sort((a, b) => a.hora.localeCompare(b.hora));
+      setDatos(resultado);
     } catch (error) {
-      console.error(error);
-      alert("Error al obtener los datos del backend.");
+      console.error("Error al consultar Firestore:", error);
+      alert("No se pudieron obtener los datos.");
     }
   };
 
   return (
-    <div className="card p-4 shadow-sm">
-      <h4 className="text-center mb-4">🔎 Consultas avanzadas</h4>
+    <div className="card p-4 shadow-sm mt-5">
+      <h4 className="text-center mb-4">🔎 Consultas avanzadas (desde Firebase)</h4>
 
       <div className="row g-2 mb-3">
         <div className="col-md-3">

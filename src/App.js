@@ -4,10 +4,11 @@ import { jsPDF } from "jspdf";
 
 import Grafico from "./components/Grafico";
 import PanelResumen from "./components/PanelResumen";
+import GraficoPromedioHora from "./components/GraficoPromedioHora"; // ✅ Nuevo componente
 import useFirebaseData from "./hooks/useFirebaseData";
 
 function App() {
-  const { datos, loading } = useFirebaseData();  // ✅ Usamos el hook
+  const { datos, loading } = useFirebaseData();
   const [darkMode, setDarkMode] = useState(false);
   const [filtrarOutliers, setFiltrarOutliers] = useState(false);
 
@@ -16,7 +17,7 @@ function App() {
     document.body.classList.toggle("bg-dark", darkMode);
   }, [darkMode]);
 
-  // 🔹 Filtrar valores atípicos (opcional)
+  // 🔹 Filtrar valores atípicos
   const datosFiltrados = filtrarOutliers
     ? datos.filter(
         (d) =>
@@ -163,6 +164,7 @@ function App() {
           {/* Gráfico y resumen */}
           <Grafico data={datosFiltrados} />
           <PanelResumen datos={datosFiltrados} />
+          <GraficoPromedioHora /> {/* ✅ Aquí se muestra la interfaz de consultas avanzadas */}
         </>
       )}
     </div>
